@@ -8,7 +8,6 @@ export default function App() {
   const { user, role, logout } = useAuth();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
 
-  // Exemplo de dados demonstrativos do projeto STEP
   const sampleCandidates = [
     {
       id: '1',
@@ -49,7 +48,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
-      {/* Header / Navbar */}
       <header className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shadow-md">
         <div>
           <h1 className="text-xl font-bold tracking-tight">STEP – Mão de Obra</h1>
@@ -80,12 +78,9 @@ export default function App() {
         </div>
       </header>
 
-      {/* Conteúdo Principal */}
       <main className="max-w-6xl mx-auto p-6 space-y-6">
-        {/* Painel Administrativo (Exibido apenas para Admin) */}
         {user && role === 'admin' && <AdminUsersManager />}
 
-        {/* Tabela de Candidatos e Exportação */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div>
@@ -141,7 +136,6 @@ export default function App() {
         </div>
       </main>
 
-      {/* Modal de Login */}
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
     </div>
   );
