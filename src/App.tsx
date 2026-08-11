@@ -1,12 +1,10 @@
-import { useState } from 'react';
 import { useAuth } from './context/AuthContext';
 import { LoginModal } from './components/LoginModal';
 import { AdminUsersManager } from './components/AdminUsersManager';
 import { exportToCSV, exportCandidateToPDF } from './utils/exportUtils';
 
 export default function App() {
-  const { user, role, logout } = useAuth();
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const { user, role, loading, logout } = useAuth();
 
   const sampleCandidates = [
     {
@@ -46,6 +44,20 @@ export default function App() {
     exportCandidateToPDF(candidate, certs, medicals);
   };
 
+  // Enquanto valida a sessão no Supabase
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center font-sans">
+        <p className="text-sm font-medium animate-pulse">Carregando sistema STEP...</p>
+      </div>
+    );
+  }
+
+  // Se não estiver logado, exibe o LoginModal direto na tela
+  if (!user) {
+    return <LoginModal />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
       <header className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shadow-md">
@@ -55,31 +67,23 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-4">
-          {user ? (
-            <div className="flex items-center gap-3">
-              <span className="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full">
-                👤 {user.email} <strong className="text-sky-400 ml-1">({role})</strong>
-              </span>
-              <button
-                onClick={logout}
-                className="text-xs text-red-400 hover:text-red-300 font-medium transition"
-              >
-                Sair
-              </button>
-            </div>
-          ) : (
+          <div className="flex items-center gap-3">
+            <span className="text-xs bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-full">
+              👤 {user.email} <strong className="text-sky-400 ml-1">({role || 'viewer'})</strong>
+            </span>
             <button
-              onClick={() => setIsLoginOpen(true)}
-              className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow transition"
+              onClick={logout}
+              className="text-xs text-red-400 hover:text-red-300 font-medium transition"
             >
-              Entrar no Sistema
+              Sair
             </button>
-          )}
+          </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto p-6 space-y-6">
-        {user && role === 'admin' && <AdminUsersManager />}
+        {/* Gestor de Usuários visível apenas para o perfil Admin */}
+        {role === 'admin' && <AdminUsersManager />}
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -88,12 +92,15 @@ export default function App() {
               <p className="text-xs text-slate-500">Gestão de currículos e certificados para operações offshore.</p>
             </div>
 
-            <button
-              onClick={() => exportToCSV(sampleCandidates)}
-              className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition"
-            >
-              <span>📄 Exportar Lista (CSV)</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Botão Exportar CSV visível para todos os usuários autenticados */}
+              <button
+                onClick={() => exportToCSV(sampleCandidates)}
+                className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center gap-2 transition"
+              >
+                <span>📄 Exportar Lista (CSV)</span>
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -135,8 +142,6 @@ export default function App() {
           </div>
         </div>
       </main>
-
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
     </div>
   );
 }

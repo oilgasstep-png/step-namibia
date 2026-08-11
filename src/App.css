@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabase';
+import { useAuth } from './context/AuthContext';
+import { LoginModal } from './components/LoginModal';
+import { AdminUsersManager } from './components/AdminUsersManager';
 import { Candidate, CandidateModal } from './components/CandidateModal';
-import { UserPlus, Search, Table, LayoutDashboard } from 'lucide-react';
+import { UserPlus, Search, Table, LayoutDashboard, Shield, LogOut } from 'lucide-react';
 
 export function App() {
+  const { user, role, loading: authLoading, logout } = useAuth();
+
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [search, setSearch] = useState('');
-  const [view, setView] = useState<'table' | 'dashboard'>('table');
+  const [view, setView] = useState<'table' | 'dashboard' | 'admin'>('table');
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -27,8 +32,24 @@ export function App() {
   };
 
   useEffect(() => {
-    fetchCandidates();
-  }, []);
+    if (user) {
+      fetchCandidates();
+    }
+  }, [user]);
+
+  // Se o contexto de autenticação estiver validando a sessão
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center font-sans">
+        <p className="text-xs font-bold animate-pulse">Carregando sistema STEP...</p>
+      </div>
+    );
+  }
+
+  // Se o usuário não estiver logado, exibe a tela bloqueante de Login
+  if (!user) {
+    return <LoginModal />;
+  }
 
   const filteredCandidates = candidates.filter(c =>
     (c.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -59,12 +80,32 @@ export function App() {
           />
         </div>
 
-        <button
-          onClick={() => { setSelectedCandidate(null); setIsModalOpen(true); }}
-          className="bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-1.5"
-        >
-          <UserPlus className="w-4 h-4" /> Novo Candidato
-        </button>
+        <div className="flex items-center gap-3">
+          {role === 'admin' && (
+            <button
+              onClick={() => { setSelectedCandidate(null); setIsModalOpen(true); }}
+              className="bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold px-4 py-2 rounded-full flex items-center gap-1.5 shadow-sm transition"
+            >
+              <UserPlus className="w-4 h-4" /> Novo Candidato
+            </button>
+          )}
+
+          <div className="h-6 w-[1px] bg-slate-200 mx-1" />
+
+          {/* User Info & Logout */}
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full">
+            <span className="text-xs text-slate-700 font-medium">
+              {user.email} <strong className="text-sky-600 font-bold">({role || 'viewer'})</strong>
+            </span>
+            <button
+              onClick={logout}
+              title="Sair do sistema"
+              className="text-slate-400 hover:text-red-600 transition ml-1"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </header>
 
       {/* Main Content */}
@@ -75,22 +116,34 @@ export function App() {
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Visões</p>
             <button
               onClick={() => setView('table')}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold ${view === 'table' ? 'bg-sky-50 text-sky-600' : 'text-slate-600 hover:bg-slate-50'}`}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition ${view === 'table' ? 'bg-sky-50 text-sky-600' : 'text-slate-600 hover:bg-slate-50'}`}
             >
               <Table className="w-4 h-4" /> Tabela Geral
             </button>
             <button
               onClick={() => setView('dashboard')}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold ${view === 'dashboard' ? 'bg-sky-50 text-sky-600' : 'text-slate-600 hover:bg-slate-50'}`}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition ${view === 'dashboard' ? 'bg-sky-50 text-sky-600' : 'text-slate-600 hover:bg-slate-50'}`}
             >
               <LayoutDashboard className="w-4 h-4" /> Métricas
             </button>
+
+            {role === 'admin' && (
+              <>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-6 mb-2">Administração</p>
+                <button
+                  onClick={() => setView('admin')}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition ${view === 'admin' ? 'bg-sky-50 text-sky-600' : 'text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <Shield className="w-4 h-4" /> Gestão de Usuários
+                </button>
+              </>
+            )}
           </div>
         </aside>
 
         {/* View Dynamic Area */}
         <main className="flex-1 p-6 overflow-y-auto">
-          {loading ? (
+          {loading && view !== 'admin' ? (
             <div className="p-8 text-center text-xs text-slate-500 font-bold">Carregando dados do Supabase...</div>
           ) : view === 'table' ? (
             <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
@@ -113,7 +166,7 @@ export function App() {
                       className="hover:bg-slate-50 cursor-pointer"
                     >
                       <td className="p-3">
-                        <img src={c.photo_url || 'https://via.placeholder.com/36'} className="w-8 h-8 rounded-lg object-cover border" />
+                        <img src={c.photo_url || 'https://via.placeholder.com/36'} className="w-8 h-8 rounded-lg object-cover border" alt={c.name} />
                       </td>
                       <td className="p-3 font-bold text-slate-800">{c.name}</td>
                       <td className="p-3 text-slate-600">{c.role || '-'}</td>
@@ -131,7 +184,7 @@ export function App() {
                 </tbody>
               </table>
             </div>
-          ) : (
+          ) : view === 'dashboard' ? (
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-white p-5 rounded-xl border shadow-sm">
                 <p className="text-xs font-bold text-slate-500">Total de Candidatos</p>
@@ -150,6 +203,8 @@ export function App() {
                 </p>
               </div>
             </div>
+          ) : (
+            role === 'admin' && <AdminUsersManager />
           )}
         </main>
       </div>
@@ -163,4 +218,5 @@ export function App() {
     </div>
   );
 }
+
 export default App;
