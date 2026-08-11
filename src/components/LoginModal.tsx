@@ -1,24 +1,21 @@
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
-export const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+export const LoginModal: React.FC = () => {
+  const { loginWithEmail } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  if (!isOpen) return null;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await loginWithEmail(email, password);
     if (error) {
-      setError(error.message);
-    } else {
-      onClose();
+      setError('E-mail ou senha inválidos. Tente novamente.');
     }
     setLoading(false);
   };
@@ -27,10 +24,10 @@ export const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
         <h2 className="text-xl font-bold text-slate-800 mb-2">Acesso ao Sistema STEP</h2>
-        <p className="text-sm text-slate-500 mb-6">Entre com suas credenciais do Supabase para acessar o painel.</p>
+        <p className="text-sm text-slate-500 mb-6">Entre com suas credenciais para acessar o painel.</p>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-700 text-xs rounded-lg">
+          <div className="mb-4 p-3 bg-red-50 text-red-700 text-xs rounded-lg font-medium">
             {error}
           </div>
         )}
@@ -60,20 +57,13 @@ export const LoginModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
             />
           </div>
 
-          <div className="flex gap-3 justify-end pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
-            >
-              Cancelar
-            </button>
+          <div className="pt-2">
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-lg disabled:opacity-50"
+              className="w-full py-2.5 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-lg transition-colors disabled:opacity-50"
             >
-              {loading ? 'Entrando...' : 'Entrar'}
+              {loading ? 'Entrando...' : 'Entrar no Sistema'}
             </button>
           </div>
         </form>
